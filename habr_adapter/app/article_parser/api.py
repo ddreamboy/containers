@@ -35,7 +35,7 @@ async def get_redis_client() -> AsyncGenerator[Any, None]:
             decode_responses=True,
         )
         await redis_client.ping()
-        logger.info("Подключение к Redis успешно установлено.")
+        logger.info("Подключение к Redis успешно установлено")
         yield redis_client
     except Exception as e:
         logger.error(f"Не удалось подключиться к Redis: {e}")
@@ -43,7 +43,7 @@ async def get_redis_client() -> AsyncGenerator[Any, None]:
     finally:
         if redis_client is not None:
             await redis_client.close()
-            logger.info("Подключение к Redis закрыто.")
+            logger.info("Подключение к Redis закрыто")
 
 
 @router.post("/parse", response_model=SArticleParsed)
@@ -113,4 +113,20 @@ async def parse_article(
         logger.error(f"Ошибка при обработке статьи: {e}")
         raise HTTPException(
             status_code=502, detail=f"Неверный формат распарсенных данных: {e}"
+        )
+
+
+@router.get("/articles")
+async def list_articles(
+    session: AsyncSession = Depends(get_async_session),
+):
+    try:
+        query = select(Article.url, Article.created_at, Article.parsed_content)
+        result = await session.execute(query)
+        articles = result.mappings().all()
+        return {"articles": articles}
+    except Exception as e:
+        logger.error(f"Ошибка при получении списка статей: {e}")
+        raise HTTPException(
+            status_code=500, detail="Ошибка при получении списка статей"
         )
