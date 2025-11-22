@@ -52,3 +52,53 @@ docker build -t habr-adapter-bad -f habr_adapter/Dockerfile.bad habr_adapter/
 
 docker run -d -p 7000:7000 --name habr-no-app habr-adapter-bad
 ```
+
+---
+
+## Описание docker-compose.yaml
+
+### Сервисы
+- `db` - основная БД (PostgreSQL 15), данные хранятся в volume `postgres_data`, настроен `healthcheck`, имя контейнера `habr_postgres_db`
+- `redis` - кэш для ускорения ответов API, данные в volume `redis_data`, настроен `healthcheck`, имя контейнера `habr_redis_cache`
+- `migrator` - init-сервис, запускается один раз для создания таблиц в БД и останавливается, имя контейнера `habr_db_migrator`
+- `habr-adapter` - основное приложение (FastAPI), собирается из `Dockerfile.good`, порт `7000`. Ждет готовности БД, Redis и завершения миграций. Имя контейнера `habr_adapter_service`
+
+### Особенности
+- все сервисы находятся в общей сети `my_network`
+- конфигурация переменных окружения вынесена в `.env` файл
+- настроены жесткие зависимости: приложение не стартует, пока не готовы базы и не прошли миграции
+
+---
+## Ответы на вопросы
+1. Можно ли ограничивать ресурсы (например, память или CPU) для сервисов в docker-compose.yml? Если нет, то почему, 
+если да, то как?
+
+Да, можно, новая версия docker compose поддерживает синтакис через секцию `deploy.resources`
+Например:
+```yaml
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+```
+Так можно задать жесткий лимит и зарезервировать ресурсы
+
+2. Как можно запустить только определенный сервис из docker-compose.yml, не запуская остальные
+
+Частный пример на `docker-compose.yaml` из этого репо
+```bash
+docker compose up -d --no-deps habr-adapter
+```
+
+флаг `--no-deps` "говорит" docker'у поднять сервис `habr-adapter`, игнорируя секцию
+```
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+```

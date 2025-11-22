@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 
 from app.article_parser.api import router as habr_router
 from app.core.logging_config import setup_logging
-from app.database.init_db import init_models
 from config import settings
 from fastapi import FastAPI
 from loguru import logger
@@ -25,7 +24,6 @@ async def lifespan(app: FastAPI):
     try:
         logger.info("Инициализация приложения...")
         ensure_dirs()
-        await init_models()
 
         logger.info("Приложение успешно запущено")
         yield
