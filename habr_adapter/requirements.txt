@@ -5,3 +5,6 @@ httpx
 pydantic-settings
 pydantic
 beautifulsoup4
+sqlalchemy
+asyncpg
+redis

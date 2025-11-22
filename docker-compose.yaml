@@ -1,0 +1,68 @@
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - my_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - my_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  habr-adapter:
+    build:
+      context: ./habr_adapter
+      dockerfile: Dockerfile.good
+    restart: always
+    volumes:
+      - ./habr_adapter/logs:/app/logs
+    environment:
+      - PROXY_URL=${PROXY_URL}
+      - DB_HOST=${POSTGRES_DB_HOST:-db}
+      - DB_PORT=${POSTGRES_PORT:-5432}
+      - DB_NAME=${POSTGRES_DB:-postgres}
+      - DB_USER=${POSTGRES_USER:-postgres}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+    ports:
+      - "${HABR_ADAPTER_PORT:-7000}:${HABR_ADAPTER_PORT:-7000}"
+    networks:
+      - my_network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${HABR_ADAPTER_PORT:-7000}"]
+    healthcheck:
+      test: ["curl", "-f", "http://localhost:${HABR_ADAPTER_PORT:-7000}/health"]
+      interval: 1m
+      timeout: 30s
+      retries: 3
+    
+volumes:
+  postgres_data:
+  redis_data:
+networks:
+  my_network:
+    driver: bridge
+    
