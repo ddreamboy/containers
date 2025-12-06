@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: habr-adapter-deployment
+  labels:
+    app: habr-adapter
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: habr-adapter
+  template:
+    metadata:
+      labels:
+        app: habr-adapter
+    spec:
+      initContainers:
+        - name: init-migration
+          image: habr-adapter-image:latest
+          imagePullPolicy: Never
+          command: ["python", "-m", "app.database.init_db"]
+          envFrom:
+            - configMapRef:
+                name: habr-app-config
+            - secretRef:
+                name: habr-app-secret
+      containers:
+        - name: habr-adapter
+          image: habr-adapter-image:latest
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+          imagePullPolicy: Never
+          command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7000"]
+          ports:
+            - containerPort: 7000
+          envFrom:
+            - configMapRef:
+                name: habr-app-config
+            - secretRef:
+                name: habr-app-secret
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 7000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 7000
+            initialDelaySeconds: 15
+            periodSeconds: 20
