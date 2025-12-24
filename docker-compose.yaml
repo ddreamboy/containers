@@ -10,7 +10,7 @@ services:
     networks:
       - my_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -24,7 +24,7 @@ services:
     networks:
       - my_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -35,18 +35,17 @@ services:
       dockerfile: Dockerfile.good
     image: habr-adapter-image:latest
     container_name: habr_db_migrator
-    command: ["python", "-m", "app.database.init_db"] 
+    command: ['python', '-m', 'app.database.init_db']
     depends_on:
       db:
         condition: service_healthy
     networks:
       - my_network
-    restart: "no"
+    restart: 'no'
 
   habr-adapter:
-    build:
-      context: ./habr_adapter
-      dockerfile: Dockerfile.good
+    image: habr-adapter-image:latest
+    pull_policy: never
     container_name: habr_adapter_service
     restart: always
     volumes:
@@ -54,7 +53,7 @@ services:
     env_file:
       - .env
     ports:
-      - "${HABR_ADAPTER_PORT}:${HABR_ADAPTER_PORT}"
+      - '${HABR_ADAPTER_PORT}:${HABR_ADAPTER_PORT}'
     networks:
       - my_network
     depends_on:
@@ -62,9 +61,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${HABR_ADAPTER_PORT}"]
+      migrator:
+        condition: service_completed_successfully
+    command: ['uvicorn', 'main:app', '--host', '0.0.0.0', '--port', '${HABR_ADAPTER_PORT}']
     healthcheck:
-      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:${HABR_ADAPTER_PORT}/health\")'"]
+      test: ['CMD-SHELL', 'python -c ''import urllib.request; urllib.request.urlopen("http://localhost:${HABR_ADAPTER_PORT}/health")''']
       interval: 1m
       timeout: 30s
       retries: 3
@@ -76,11 +77,11 @@ services:
         reservations:
           cpus: '0.25'
           memory: 256M
-    
+
 volumes:
   postgres_data:
   redis_data:
+
 networks:
   my_network:
     driver: bridge
-    

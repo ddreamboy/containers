@@ -19,6 +19,9 @@ COPY . .
 # Создаем папку для логов и назначаем права
 RUN mkdir -p /app/logs && chown -R appuser:appgroup /app
 
+# Монтируем директорию для логов
+VOLUME ["/app/logs"]
+
 # Переключаемся на пользователя
 USER appuser
 
