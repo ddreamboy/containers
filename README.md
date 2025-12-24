@@ -34,11 +34,15 @@
 1. Нативные приложения с графическим интерфейсом
 2. Крупные монолитные приложения с зависимостью от железа
 
-Запкус хорошего контейнера
+Запкус хорошего контейнера с монтированием volume
 ```bash
+mkdir -p habr_adapter/logs
+
+chmod 777 habr_adapter/logs
+
 docker build -t habr-adapter-good -f habr_adapter/Dockerfile.good habr_adapter/
 
-docker run -d -p 7000:7000 --name habr-app habr-adapter-good
+docker run -d -p 7000:7000 -v ./habr_adapter/logs:/app/logs --name habr-app habr-adapter-good
 ```
 
 > если запустили хороший контейнер, остановите его перед запуском плохого
@@ -46,7 +50,7 @@ docker run -d -p 7000:7000 --name habr-app habr-adapter-good
 docker stop habr-app
 ```
 
-Запкус плохого контейнера
+Запкус плохого контейнера без монтирования volume
 ```bash
 docker build -t habr-adapter-bad -f habr_adapter/Dockerfile.bad habr_adapter/
 
